@@ -1,0 +1,20 @@
+- insert:
+    - id: dsh-remote-gateway
+      name: dsh-remote-gateway
+      config:
+        enabled: true
+        listenHost: '::'
+        port: 3088
+        username: admin
+        password: ''
+        maxFailedAttempts: 5
+        banDurationMinutes: 15
+        cloudflaredPath: cloudflared
+        autoInstallCloudflared: true
+        autoStartQuickTunnel: false
+        tunnelProtocol: http2
+        tunnelStartupTimeoutMs: 30000
+        tunnelStartupAttempts: 3
+        tunnelReachabilityTimeoutMs: 10000
+        processGraceMs: 5000
+        webServerStartupTimeoutMs: 30000

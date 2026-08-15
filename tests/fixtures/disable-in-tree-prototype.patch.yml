@@ -1,0 +1,25 @@
+- id: host-remote-access
+  disabled: true
+
+- id: ui-remote-access
+  disabled: true
+
+- id: dsh-remote-gateway
+  config:
+    enabled: true
+    listenHost: '127.0.0.1'
+    port: 31888
+    username: e2e-user
+    password: e2e-password-2026
+    maxFailedAttempts: 5
+    banDurationMinutes: 15
+    cloudflaredPath: cloudflared
+    autoInstallCloudflared: true
+    autoStartQuickTunnel: false
+    tunnelProtocol: http2
+    dataDirectory: ''
+    tunnelStartupTimeoutMs: 30000
+    tunnelStartupAttempts: 3
+    tunnelReachabilityTimeoutMs: 10000
+    processGraceMs: 5000
+    webServerStartupTimeoutMs: 30000
