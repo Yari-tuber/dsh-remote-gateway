@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import net from 'node:net'
 import tls from 'node:tls'
 
@@ -96,7 +97,7 @@ async function websocketUpgrade(origin, path, cookie) {
         'Connection: Upgrade',
         'Upgrade: websocket',
         'Sec-WebSocket-Version: 13',
-        'Sec-WebSocket-Key: ZHNoLXJlbW90ZS1ndy0wMQ==',
+        `Sec-WebSocket-Key: ${randomBytes(16).toString('base64')}`,
         `Origin: ${url.origin}`,
         `Cookie: ${cookie}`,
         '',
