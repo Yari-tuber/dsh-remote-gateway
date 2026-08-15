@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">DSH Remote Gateway</title>
+  <desc id="desc">A desktop running DeepSeek Harness connects securely to a mobile browser through an authenticated encrypted tunnel.</desc>
+  <defs>
+    <linearGradient id="background" x1="120" y1="60" x2="1480" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#171B26"/>
+      <stop offset="0.52" stop-color="#0B0F17"/>
+      <stop offset="1" stop-color="#07090E"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="460" y1="520" x2="1165" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#50E6FF"/>
+      <stop offset="0.5" stop-color="#5B8CFF"/>
+      <stop offset="1" stop-color="#A778FF"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="400" y1="320" x2="850" y2="670" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#151C2A"/>
+      <stop offset="1" stop-color="#0B1019"/>
+    </linearGradient>
+    <linearGradient id="phoneScreen" x1="1125" y1="300" x2="1290" y2="650" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9FBFF"/>
+      <stop offset="1" stop-color="#E8EEF8"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="0" cy="0" r="1" gradientTransform="translate(817 480) rotate(90) scale(318 490)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#437BFF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#437BFF" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="52" height="52" patternUnits="userSpaceOnUse">
+      <path d="M52 0H0V52" fill="none" stroke="#A9B7D1" stroke-opacity="0.07"/>
+    </pattern>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#000" flood-opacity="0.46"/>
+    </filter>
+    <clipPath id="laptopClip"><rect x="350" y="302" width="520" height="326" rx="20"/></clipPath>
+    <clipPath id="phoneClip"><rect x="1113" y="283" width="214" height="400" rx="31"/></clipPath>
+  </defs>
+
+  <rect width="1600" height="900" rx="38" fill="url(#background)"/>
+  <rect width="1600" height="900" rx="38" fill="url(#grid)"/>
+  <ellipse cx="817" cy="480" rx="490" ry="318" fill="url(#aura)"/>
+  <circle cx="136" cy="132" r="3" fill="#5CEBFF"/>
+  <circle cx="1442" cy="190" r="2" fill="#A778FF"/>
+  <circle cx="1482" cy="690" r="3" fill="#5B8CFF"/>
+
+  <g transform="translate(110 94)">
+    <rect width="46" height="46" rx="14" fill="#EFF5FF"/>
+    <path d="M13 23c0-6.1 4.9-11 11-11h9v7h-9a4 4 0 0 0 0 8h9v7h-9c-6.1 0-11-4.9-11-11Z" fill="#10141D"/>
+    <circle cx="32.5" cy="23" r="3.5" fill="#5B8CFF"/>
+  </g>
+  <text x="178" y="126" fill="#F6F8FC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25" font-weight="700" letter-spacing="0.2">DSH Remote Gateway</text>
+
+  <text x="800" y="172" text-anchor="middle" fill="#FFFFFF" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="67" font-weight="750" letter-spacing="-2.6">DSH Remote Gateway</text>
+  <text x="800" y="222" text-anchor="middle" fill="#AAB5C8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24" font-weight="450">Secure phone access for DeepSeek Harness</text>
+
+  <g opacity="0.92">
+    <path d="M753 474C895 356 1002 358 1135 440" fill="none" stroke="#274266" stroke-width="22" stroke-linecap="round" opacity="0.56"/>
+    <path d="M753 474C895 356 1002 358 1135 440" fill="none" stroke="url(#beam)" stroke-width="5" stroke-linecap="round" stroke-dasharray="4 20" filter="url(#glow)"/>
+    <path d="M760 510C904 600 1018 582 1138 512" fill="none" stroke="#253D5F" stroke-width="16" stroke-linecap="round" opacity="0.42"/>
+    <path d="M760 510C904 600 1018 582 1138 512" fill="none" stroke="url(#beam)" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 18" opacity="0.72"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="327" y="280" width="566" height="374" rx="28" fill="#303846"/>
+    <rect x="339" y="292" width="542" height="350" rx="22" fill="#090D13"/>
+    <rect x="350" y="302" width="520" height="326" rx="20" fill="url(#screen)"/>
+    <g clip-path="url(#laptopClip)">
+      <rect x="350" y="302" width="520" height="46" fill="#111824"/>
+      <circle cx="377" cy="325" r="5" fill="#FF6B6B"/>
+      <circle cx="395" cy="325" r="5" fill="#FFD166"/>
+      <circle cx="413" cy="325" r="5" fill="#56E39F"/>
+      <rect x="444" y="315" width="194" height="20" rx="10" fill="#222C3D"/>
+      <rect x="365" y="368" width="114" height="242" rx="16" fill="#0D131E" stroke="#293449"/>
+      <rect x="382" y="390" width="75" height="11" rx="5.5" fill="#65728A"/>
+      <rect x="382" y="422" width="58" height="9" rx="4.5" fill="#323D50"/>
+      <rect x="382" y="449" width="72" height="9" rx="4.5" fill="#323D50"/>
+      <rect x="382" y="476" width="48" height="9" rx="4.5" fill="#323D50"/>
+      <rect x="500" y="368" width="350" height="112" rx="16" fill="#151D2A" stroke="#2D3B51"/>
+      <circle cx="529" cy="399" r="10" fill="#5B8CFF"/>
+      <rect x="550" y="391" width="164" height="13" rx="6.5" fill="#E4ECFA"/>
+      <rect x="529" y="423" width="285" height="9" rx="4.5" fill="#3A465A"/>
+      <rect x="529" y="445" width="226" height="9" rx="4.5" fill="#303B4D"/>
+      <rect x="500" y="497" width="350" height="113" rx="16" fill="#101722" stroke="#29364A"/>
+      <rect x="524" y="520" width="88" height="10" rx="5" fill="#50E6FF" opacity="0.9"/>
+      <rect x="524" y="547" width="273" height="9" rx="4.5" fill="#354154"/>
+      <rect x="524" y="570" width="198" height="9" rx="4.5" fill="#2B3546"/>
+    </g>
+    <path d="M284 654h652l55 48c7 6 3 18-7 18H237c-10 0-14-12-7-18l54-48Z" fill="#3A4352"/>
+    <path d="M291 662h639l20 18H270l21-18Z" fill="#1E2530"/>
+    <path d="M539 680h159c10 0 15 13 7 19H532c-8-6-3-19 7-19Z" fill="#252D39"/>
+  </g>
+
+  <g filter="url(#glow)">
+    <circle cx="948" cy="472" r="66" fill="#0D1420" stroke="url(#beam)" stroke-width="4"/>
+    <circle cx="948" cy="472" r="50" fill="#131D2C" stroke="#5B8CFF" stroke-opacity="0.34"/>
+    <path d="M928 464v-11c0-12 9-21 20-21s20 9 20 21v11" fill="none" stroke="#EAF3FF" stroke-width="7" stroke-linecap="round"/>
+    <rect x="918" y="461" width="60" height="49" rx="14" fill="url(#beam)"/>
+    <circle cx="948" cy="483" r="6" fill="#0B1120"/>
+    <path d="M948 488v9" stroke="#0B1120" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1091" y="260" width="258" height="446" rx="47" fill="#242C39"/>
+    <rect x="1102" y="272" width="236" height="422" rx="38" fill="#080B10"/>
+    <rect x="1113" y="283" width="214" height="400" rx="31" fill="url(#phoneScreen)"/>
+    <g clip-path="url(#phoneClip)">
+      <rect x="1113" y="283" width="214" height="56" fill="#F4F7FC"/>
+      <rect x="1171" y="294" width="97" height="24" rx="12" fill="#151922"/>
+      <circle cx="1192" cy="306" r="3" fill="#4A5568"/>
+      <rect x="1132" y="359" width="176" height="74" rx="17" fill="#FFFFFF" stroke="#DCE3EE"/>
+      <circle cx="1157" cy="385" r="11" fill="#5B8CFF"/>
+      <rect x="1177" y="377" width="100" height="11" rx="5.5" fill="#151B26"/>
+      <rect x="1150" y="405" width="128" height="8" rx="4" fill="#A5B0C1"/>
+      <rect x="1132" y="449" width="176" height="148" rx="17" fill="#FFFFFF" stroke="#DCE3EE"/>
+      <rect x="1150" y="470" width="84" height="10" rx="5" fill="#1D2532"/>
+      <rect x="1150" y="495" width="140" height="9" rx="4.5" fill="#AAB4C4"/>
+      <rect x="1150" y="516" width="116" height="9" rx="4.5" fill="#BBC4D2"/>
+      <rect x="1150" y="548" width="140" height="32" rx="16" fill="#151922"/>
+      <circle cx="1170" cy="564" r="5" fill="#56E39F"/>
+      <rect x="1183" y="559" width="84" height="10" rx="5" fill="#FFFFFF"/>
+      <rect x="1132" y="613" width="176" height="50" rx="17" fill="#EAF0FA"/>
+      <path d="M1160 638h63" stroke="#738198" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="1278" cy="638" r="12" fill="#5B8CFF"/>
+    </g>
+  </g>
+
+  <g transform="translate(452 782)">
+    <rect width="198" height="44" rx="22" fill="#151D29" stroke="#2A3A50"/>
+    <circle cx="25" cy="22" r="6" fill="#56E39F"/>
+    <text x="43" y="28" fill="#DCE6F4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600">One-click setup</text>
+  </g>
+  <g transform="translate(700 782)">
+    <rect width="200" height="44" rx="22" fill="#151D29" stroke="#2A3A50"/>
+    <path d="M20 22l5 5 10-11" fill="none" stroke="#50E6FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="48" y="28" fill="#DCE6F4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600">Authenticated</text>
+  </g>
+  <g transform="translate(950 782)">
+    <rect width="198" height="44" rx="22" fill="#151D29" stroke="#2A3A50"/>
+    <circle cx="25" cy="22" r="8" fill="none" stroke="#A778FF" stroke-width="2.5"/>
+    <path d="M17 22h16M25 14c4 4 4 12 0 16M25 14c-4 4-4 12 0 16" fill="none" stroke="#A778FF" stroke-width="1.5"/>
+    <text x="45" y="28" fill="#DCE6F4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="600">Cross-platform</text>
+  </g>
+</svg>

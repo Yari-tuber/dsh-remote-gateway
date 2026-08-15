@@ -6,12 +6,37 @@
 
 [简体中文](README.zh-CN.md) · [CLI installation](docs/cli-install.md) · [AI-assisted installation](docs/ai-install.md) · [Security](SECURITY.md)
 
+<br>
+
+<img src="docs/assets/hero.png" alt="DSH Remote Gateway securely connects DeepSeek Harness on a computer to a mobile browser" width="100%">
+
 </div>
 
 DSH Remote Gateway adds a polished **Remote Access** page to DeepSeek Harness settings. It can detect or securely install `cloudflared`, create a temporary HTTPS address, and protect Harness with a dedicated login before proxying HTTP and WebSocket traffic.
 
 > [!WARNING]
 > DeepSeek Harness can run shell commands and access files. Treat remote access like remote control of your computer: use a unique password, keep the Harness Web server bound to `127.0.0.1`, do not share the tunnel URL, and stop the tunnel when it is not needed.
+
+## Preview
+
+### Remote Access settings
+
+![DSH Remote Gateway desktop settings](docs/assets/settings-desktop.png)
+
+### Mobile experience
+
+<table>
+<tr>
+<td width="50%" align="center"><img src="docs/assets/settings-mobile.png" alt="Responsive Remote Access settings on a phone"></td>
+<td width="50%" align="center"><img src="docs/assets/phone-login.png" alt="Authenticated mobile login page"></td>
+</tr>
+<tr>
+<td align="center">Responsive settings</td>
+<td align="center">Authenticated login page</td>
+</tr>
+</table>
+
+The screenshots use an isolated test profile with synthetic credentials. No personal account, filesystem path, or Harness session data is included.
 
 ## Highlights
 

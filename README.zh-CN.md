@@ -6,12 +6,37 @@
 
 [English](README.md) · [命令行安装](docs/cli-install.zh-CN.md) · [AI 辅助安装](docs/ai-install.zh-CN.md) · [安全策略](SECURITY.md)
 
+<br>
+
+<img src="docs/assets/hero.png" alt="DSH Remote Gateway 安全连接电脑上的 DeepSeek Harness 与手机浏览器" width="100%">
+
 </div>
 
 DSH Remote Gateway 会在 DeepSeek Harness 设置中加入美观的**远程访问**页面。它可以检测或安全安装 `cloudflared`、创建临时 HTTPS 地址，并在转发 Harness 的 HTTP 与 WebSocket 流量前要求独立登录。
 
 > [!WARNING]
 > DeepSeek Harness 能执行命令并访问文件。请把远程访问视为对电脑的远程控制：使用独立强密码、让 Harness 主 Web 服务只监听 `127.0.0.1`、不要分享隧道地址，并在不用时停止隧道。
+
+## 界面预览
+
+### 远程访问设置
+
+![DSH Remote Gateway 桌面端设置](docs/assets/settings-desktop.png)
+
+### 手机端体验
+
+<table>
+<tr>
+<td width="50%" align="center"><img src="docs/assets/settings-mobile.png" alt="手机端响应式远程访问设置"></td>
+<td width="50%" align="center"><img src="docs/assets/phone-login.png" alt="带认证保护的手机登录页"></td>
+</tr>
+<tr>
+<td align="center">响应式设置页面</td>
+<td align="center">独立认证登录页</td>
+</tr>
+</table>
+
+截图来自使用测试凭据的隔离 profile，不包含个人账号、本机目录或 Harness 会话数据。
 
 ## 主要功能
 
