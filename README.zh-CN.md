@@ -109,11 +109,11 @@ dsh --profile web
 | 字段 | 默认值 | 作用 |
 |---|---:|---|
 | `enabled` | `true` | 随 Harness 启动认证网关。 |
-| `listenHost` | `::` | 在支持双栈时接受局域网 IPv4/IPv6。 |
+| `listenHost` | `::` | 在支持双栈时接受局域网 IPv4/IPv6。只使用 Quick Tunnel 时请设为 `127.0.0.1`。 |
 | `port` | `3088` | 认证网关端口。 |
 | `username` | `admin` | 初始登录用户名。 |
-| `password` | 空 | 启动时生成高强度内存密码。 |
-| `maxFailedAttempts` | `5` | 触发临时封禁前允许的失败次数。 |
+| `password` | 空 | 启动时生成高强度内存密码。少于 10 个字符的值会被自动生成的密码替代。 |
+| `maxFailedAttempts` | `5` | 同一来源地址在一个封禁时长内触发临时封禁前允许的失败次数。 |
 | `banDurationMinutes` | `15` | 临时封禁时长。 |
 | `cloudflaredPath` | `cloudflared` | 可执行文件名或绝对路径。 |
 | `autoInstallCloudflared` | `true` | 缺失时安装已校验的固定版本。 |
@@ -139,6 +139,9 @@ Cloudflare 没有为固定版本提供 Windows ARM64 Quick Tunnel 文件，因�
 
 - Harness 主 Web 服务必须只监听回环地址；监听局域网或公网网卡可能绕过本插件。
 - 登录会话、失败计数和自动生成的凭据只保存在内存中。
+- 登录会话 12 小时后过期，退出登录或修改用户名/密码后立即失效。最多保留 32 个会话，超出时最早的会话先失效。
+- 登录失败按来源地址计数。Quick Tunnel 访客通过本机 `cloudflared` 转发的 `CF-Connecting-IP` 请求头识别，陌生人猜错密码不会把你锁在外面；局域网直连时会忽略该请求头。
+- 局域网直连地址使用明文 HTTP，密码会以未加密形式经过局域网。只使用 Quick Tunnel 时请把 `listenHost` 设为 `127.0.0.1`，不要在不可信网络或公网 IPv6 地址上暴露网关端口。
 - 插件不包含遥测。托管安装会访问 GitHub Releases，Quick Tunnel 会连接 Cloudflare。
 - Quick Tunnel 不保证可用性，适合个人临时访问，不适合作为生产或多人入口。
 

@@ -109,11 +109,11 @@ The bundle provides safe defaults in [`cordis.patch.yml`](cordis.patch.yml). A p
 | Field | Default | Purpose |
 |---|---:|---|
 | `enabled` | `true` | Start the authenticated gateway with Harness. |
-| `listenHost` | `::` | Accept LAN IPv4/IPv6 where dual stack is available. |
+| `listenHost` | `::` | Accept LAN IPv4/IPv6 where dual stack is available. Use `127.0.0.1` when only the Quick Tunnel is needed. |
 | `port` | `3088` | Authenticated gateway port. |
 | `username` | `admin` | Initial login username. |
-| `password` | empty | Generate a strong in-memory password at boot. |
-| `maxFailedAttempts` | `5` | Failed logins before a temporary ban. |
+| `password` | empty | Generate a strong in-memory password at boot. Values shorter than 10 characters are replaced by a generated password. |
+| `maxFailedAttempts` | `5` | Failed logins from one source address within one ban window before a temporary ban. |
 | `banDurationMinutes` | `15` | Temporary ban duration. |
 | `cloudflaredPath` | `cloudflared` | Executable name or absolute path. |
 | `autoInstallCloudflared` | `true` | Install the verified pinned build when missing. |
@@ -139,6 +139,9 @@ Cloudflare may temporarily rate-limit repeated Quick Tunnel creation. The plugin
 
 - Keep the main Harness Web server on loopback. Binding it to a LAN or public interface can bypass this gateway.
 - Authentication state, failed-login counters, and generated credentials are memory-only.
+- Login sessions expire after 12 hours and end on logout or any username/password change. At most 32 sessions are kept; the oldest is dropped first.
+- Failed logins are counted per source address. Quick Tunnel visitors are identified by the `CF-Connecting-IP` header from the local `cloudflared` process, so a stranger who guesses wrong does not lock you out. The header is ignored on direct LAN connections.
+- Direct LAN addresses use plain HTTP, so the password crosses the local network unencrypted. Set `listenHost` to `127.0.0.1` if you only use the Quick Tunnel, and never expose the gateway port on an untrusted network or a public IPv6 address.
 - The plugin has no telemetry. Managed installation contacts GitHub Releases; Quick Tunnel operation contacts Cloudflare.
 - Quick Tunnels have no uptime guarantee and are intended for personal, temporary access rather than production or multi-user deployments.
 

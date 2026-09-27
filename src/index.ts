@@ -100,6 +100,7 @@ export interface RemoteGatewayConfig {
 interface FailedAttempt {
   count: number
   banUntil: number
+  lastFailureAt: number
 }
 
 interface UpdateInput {
@@ -123,6 +124,9 @@ const COOKIE_NAME = 'dsh_remote_gateway_session'
 const LOGIN_PATH = '/__dsh_remote_gateway/login'
 const LOGOUT_PATH = '/__dsh_remote_gateway/logout'
 const MAX_BODY_BYTES = 16 * 1024
+const MIN_PASSWORD_LENGTH = 10
+const SESSION_TTL_MS = 12 * 60 * 60 * 1_000
+const MAX_SESSIONS = 32
 const QUICK_TUNNEL_URL = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i
 
 /** Authenticated proxy service controlled from the Harness settings page. */
@@ -155,7 +159,8 @@ export class RemoteGatewayService extends Service {
   private server: Server | undefined
   private readonly clientSockets = new Set<Duplex>()
   private readonly upstreamSockets = new Set<Socket>()
-  private readonly sessions = new Set<string>()
+  /** Session token to expiry time, in insertion order so the oldest session is evicted first. */
+  private readonly sessions = new Map<string, number>()
   private readonly failedAttempts = new Map<string, FailedAttempt>()
   private readonly cloudflared: CloudflaredManager
   private webServer!: WebServerRuntime
@@ -176,7 +181,13 @@ export class RemoteGatewayService extends Service {
     this.activeEnabled = config.enabled
     this.activePort = config.port
     this.activeUsername = config.username.trim() || 'admin'
-    this.activePassword = config.password.trim() || randomBytes(15).toString('base64url')
+    const configuredPassword = config.password.trim()
+    if (configuredPassword.length > 0 && configuredPassword.length < MIN_PASSWORD_LENGTH) {
+      ctx.logger.warn(`configured password is shorter than ${MIN_PASSWORD_LENGTH} characters; a random password was generated instead`)
+    }
+    this.activePassword = configuredPassword.length >= MIN_PASSWORD_LENGTH
+      ? configuredPassword
+      : randomBytes(15).toString('base64url')
     this.cloudflared = new CloudflaredManager({
       configuredPath: config.cloudflaredPath,
       ...config.dataDirectory.trim() === '' ? {} : { dataDirectory: config.dataDirectory },
@@ -229,7 +240,9 @@ export class RemoteGatewayService extends Service {
     const nextUsername = update.username?.trim() || this.activeUsername
     const nextPassword = update.password?.trim() || this.activePassword
     if (nextUsername.length === 0) throw new TypeError('username must not be empty')
-    if (nextPassword.length < 10) throw new TypeError('password must contain at least 10 characters')
+    if (nextPassword.length < MIN_PASSWORD_LENGTH) {
+      throw new TypeError(`password must contain at least ${MIN_PASSWORD_LENGTH} characters`)
+    }
 
     const wasTunnelActive = this.tunnel.state === 'running' || this.tunnel.state === 'starting'
     const needsGatewayRestart = nextPort !== this.activePort
@@ -608,7 +621,7 @@ export class RemoteGatewayService extends Service {
 
   private async handleGatewayRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const path = requestPath(request)
-    const clientIp = cleanIp(request.socket.remoteAddress)
+    const clientIp = clientAddress(request)
     if (path === LOGIN_PATH) {
       await this.handleLogin(request, response, clientIp)
       return
@@ -644,7 +657,14 @@ export class RemoteGatewayService extends Service {
       sendText(response, 405, 'Method not allowed.')
       return
     }
-    const form = new URLSearchParams(await readBody(request))
+    let body: string
+    try {
+      body = await readBody(request)
+    } catch {
+      sendText(response, 413, 'Request body too large.')
+      return
+    }
+    const form = new URLSearchParams(body)
     const username = form.get('username') ?? ''
     const password = form.get('password') ?? ''
     if (!safeEqual(username, this.activeUsername) || !safeEqual(password, this.activePassword)) {
@@ -653,11 +673,10 @@ export class RemoteGatewayService extends Service {
       return
     }
     this.failedAttempts.delete(clientIp)
-    const token = randomBytes(32).toString('base64url')
-    this.sessions.add(token)
+    const token = this.createSession()
     response.writeHead(303, {
       location: '/',
-      'set-cookie': sessionCookie(token, forwardedProto(request.headers) === 'https'),
+      'set-cookie': sessionCookie(token, forwardedProto(request) === 'https'),
       'cache-control': 'no-store',
     })
     response.end()
@@ -665,7 +684,26 @@ export class RemoteGatewayService extends Service {
 
   private isAuthorized(request: IncomingMessage): boolean {
     const token = readCookie(request.headers.cookie, COOKIE_NAME)
-    return token !== undefined && this.sessions.has(token)
+    if (token === undefined) return false
+    const expiresAt = this.sessions.get(token)
+    if (expiresAt === undefined) return false
+    if (expiresAt > Date.now()) return true
+    this.sessions.delete(token)
+    return false
+  }
+
+  private createSession(): string {
+    const now = Date.now()
+    for (const [token, expiresAt] of this.sessions) {
+      if (expiresAt <= now) this.sessions.delete(token)
+    }
+    for (const token of this.sessions.keys()) {
+      if (this.sessions.size < MAX_SESSIONS) break
+      this.sessions.delete(token)
+    }
+    const token = randomBytes(32).toString('base64url')
+    this.sessions.set(token, now + SESSION_TTL_MS)
+    return token
   }
 
   private proxyHttp(request: IncomingMessage, response: ServerResponse, clientIp: string): void {
@@ -674,7 +712,7 @@ export class RemoteGatewayService extends Service {
       port: this.webServer.port,
       method: request.method,
       path: request.url,
-      headers: proxyHeaders(request.headers, clientIp, forwardedProto(request.headers), this.webServer.port),
+      headers: proxyHeaders(request.headers, clientIp, forwardedProto(request), this.webServer.port),
     } satisfies RequestOptions, upstreamResponse => {
       response.writeHead(upstreamResponse.statusCode ?? 502, upstreamResponse.headers)
       upstreamResponse.pipe(response)
@@ -697,12 +735,7 @@ export class RemoteGatewayService extends Service {
     this.upstreamSockets.add(upstream)
     upstream.once('close', () => this.upstreamSockets.delete(upstream))
     upstream.once('connect', () => {
-      const headers = proxyHeaders(
-        request.headers,
-        cleanIp(request.socket.remoteAddress),
-        forwardedProto(request.headers),
-        this.webServer.port,
-      )
+      const headers = proxyHeaders(request.headers, clientAddress(request), forwardedProto(request), this.webServer.port)
       let wire = `${request.method ?? 'GET'} ${request.url ?? '/'} HTTP/${request.httpVersion}\r\n`
       for (const [name, value] of Object.entries(headers)) {
         if (value !== undefined) wire += `${name}: ${Array.isArray(value) ? value.join(', ') : value}\r\n`
@@ -717,27 +750,36 @@ export class RemoteGatewayService extends Service {
   }
 
   private isBanned(clientIp: string): boolean {
-    const attempt = this.failedAttempts.get(clientIp)
-    if (attempt === undefined) return false
-    if (attempt.banUntil > Date.now()) return true
-    if (attempt.banUntil !== 0) this.failedAttempts.delete(clientIp)
-    return false
+    this.expireBans()
+    return (this.failedAttempts.get(clientIp)?.banUntil ?? 0) > Date.now()
   }
 
+  /** Count a failure; failures older than one ban window no longer count toward a ban. */
   private recordFailure(clientIp: string): void {
-    const attempt = this.failedAttempts.get(clientIp) ?? { count: 0, banUntil: 0 }
+    this.expireBans()
+    const now = Date.now()
+    const attempt = this.failedAttempts.get(clientIp) ?? { count: 0, banUntil: 0, lastFailureAt: now }
     attempt.count += 1
+    attempt.lastFailureAt = now
     if (attempt.count >= this.config.maxFailedAttempts) {
-      attempt.banUntil = Date.now() + this.config.banDurationMinutes * 60_000
+      attempt.banUntil = now + this.banDurationMs()
     }
     this.failedAttempts.set(clientIp, attempt)
   }
 
+  /** Drop finished bans and failure counters that have gone quiet for a full ban window. */
   private expireBans(): void {
     const now = Date.now()
     for (const [ip, attempt] of this.failedAttempts) {
-      if (attempt.banUntil !== 0 && attempt.banUntil <= now) this.failedAttempts.delete(ip)
+      const expired = attempt.banUntil === 0
+        ? attempt.lastFailureAt + this.banDurationMs() <= now
+        : attempt.banUntil <= now
+      if (expired) this.failedAttempts.delete(ip)
     }
+  }
+
+  private banDurationMs(): number {
+    return this.config.banDurationMinutes * 60_000
   }
 
   private closeTunnelReaders(): void {
@@ -799,6 +841,23 @@ function cleanIp(value: string | undefined): string {
   return (value ?? 'unknown').replace(/^::ffff:/, '')
 }
 
+function isLoopbackIp(value: string): boolean {
+  return value === '::1' || value.startsWith('127.')
+}
+
+/**
+ * Identify the browser behind a request. Quick Tunnel traffic reaches the gateway from the local cloudflared
+ * process, so its loopback peer is replaced by the `CF-Connecting-IP` header Cloudflare sets. Direct LAN
+ * clients connect from a non-loopback address and therefore cannot choose their own identity.
+ */
+function clientAddress(request: IncomingMessage): string {
+  const peer = cleanIp(request.socket.remoteAddress)
+  if (!isLoopbackIp(peer)) return peer
+  const header = request.headers['cf-connecting-ip']
+  const connecting = (Array.isArray(header) ? header[0] : header)?.trim()
+  return connecting !== undefined && net.isIP(connecting) !== 0 ? cleanIp(connecting) : peer
+}
+
 function stripZone(value: string): string {
   return value.split('%', 1)[0] ?? value
 }
@@ -830,8 +889,10 @@ function expiredCookie(): string {
   return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`
 }
 
-function forwardedProto(headers: IncomingHttpHeaders): 'http' | 'https' {
-  const header = headers['x-forwarded-proto']
+/** Trust `X-Forwarded-Proto` only from a local proxy such as cloudflared. */
+function forwardedProto(request: IncomingMessage): 'http' | 'https' {
+  if (!isLoopbackIp(cleanIp(request.socket.remoteAddress))) return 'http'
+  const header = request.headers['x-forwarded-proto']
   const value = Array.isArray(header) ? header[0] : header
   return value?.split(',', 1)[0]?.trim().toLowerCase() === 'https' ? 'https' : 'http'
 }

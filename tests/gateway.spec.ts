@@ -1,5 +1,6 @@
 import { createServer } from 'node:http'
 import net from 'node:net'
+import os from 'node:os'
 import { PassThrough } from 'node:stream'
 import { Context } from '@deepseek-ai/cordis'
 import WebServer from '@deepseek-ai/dsh-host-webserver'
@@ -10,7 +11,7 @@ import type {
   SubprocessTerminalHandle,
   SubprocessTerminalSpawnSpec,
 } from '@deepseek-ai/dsh-subprocess'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import RemoteGatewayService from '../src/index.ts'
 
 class FakeSubprocessRuntime extends SubprocessRuntime {
@@ -63,6 +64,7 @@ class FakeSubprocessRuntime extends SubprocessRuntime {
 const contexts: Context[] = []
 
 afterEach(async () => {
+  vi.useRealTimers()
   for (const ctx of contexts.splice(0)) await ctx.fiber.dispose()
 })
 
@@ -176,17 +178,130 @@ describe('RemoteGatewayService', () => {
   })
 })
 
-async function createContext(gatewayPort: number): Promise<Context> {
+describe('RemoteGatewayService login protection', () => {
+  it('bans each Quick Tunnel visitor by its Cloudflare source address', async () => {
+    const gatewayPort = await freePort()
+    await createContext(gatewayPort)
+    const origin = `http://127.0.0.1:${gatewayPort}`
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect((await postLogin(origin, 'wrong-password', '203.0.113.7')).status).toBe(401)
+    }
+    expect((await postLogin(origin, 'correct-horse', '203.0.113.7')).status).toBe(403)
+    expect((await postLogin(origin, 'correct-horse', '198.51.100.20')).status).toBe(303)
+    expect((await postLogin(origin, 'correct-horse')).status).toBe(303)
+  })
+
+  it('forgets old failures and lifts a ban after the ban window', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    const gatewayPort = await freePort()
+    const ctx = await createContext(gatewayPort)
+    const origin = `http://127.0.0.1:${gatewayPort}`
+
+    await postLogin(origin, 'wrong-password', '203.0.113.7')
+    await postLogin(origin, 'wrong-password', '203.0.113.7')
+    vi.setSystemTime(Date.now() + 61_000)
+    expect((await postLogin(origin, 'wrong-password', '203.0.113.7')).status).toBe(401)
+    expect(ctx.remoteGateway.getStatus().bannedIps).toEqual([])
+
+    await postLogin(origin, 'wrong-password', '203.0.113.7')
+    await postLogin(origin, 'wrong-password', '203.0.113.7')
+    expect(ctx.remoteGateway.getStatus().bannedIps).toEqual(['203.0.113.7'])
+    vi.setSystemTime(Date.now() + 61_000)
+    expect(ctx.remoteGateway.getStatus().bannedIps).toEqual([])
+    expect((await postLogin(origin, 'correct-horse', '203.0.113.7')).status).toBe(303)
+  })
+
+  it.skipIf(lanIpv4() === undefined)('ignores a spoofed Cloudflare source address from a direct LAN client', async () => {
+    const gatewayPort = await freePort()
+    const ctx = await createContext(gatewayPort, { listenHost: '0.0.0.0' })
+    const lanOrigin = `http://${lanIpv4()!}:${gatewayPort}`
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await postLogin(lanOrigin, 'wrong-password', `203.0.113.${attempt}`)
+    }
+    expect(ctx.remoteGateway.getStatus().bannedIps).toEqual([lanIpv4()])
+    const success = await postLogin(`http://127.0.0.1:${gatewayPort}`, 'correct-horse')
+    expect(success.status).toBe(303)
+  })
+
+  it('expires sessions and invalidates them on logout and credential changes', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    const gatewayPort = await freePort()
+    const ctx = await createContext(gatewayPort)
+    const origin = `http://127.0.0.1:${gatewayPort}`
+
+    const expiring = sessionCookieOf(await postLogin(origin, 'correct-horse'))
+    expect((await fetch(origin, { headers: { cookie: expiring }, redirect: 'manual' })).status).not.toBe(303)
+    vi.setSystemTime(Date.now() + 12 * 60 * 60 * 1_000 + 1)
+    expect((await fetch(origin, { headers: { cookie: expiring }, redirect: 'manual' })).status).toBe(303)
+
+    const loggedOut = sessionCookieOf(await postLogin(origin, 'correct-horse'))
+    await fetch(`${origin}/__dsh_remote_gateway/logout`, { headers: { cookie: loggedOut }, redirect: 'manual' })
+    expect((await fetch(origin, { headers: { cookie: loggedOut }, redirect: 'manual' })).status).toBe(303)
+
+    const replaced = sessionCookieOf(await postLogin(origin, 'correct-horse'))
+    await ctx.remoteGateway.update({ password: 'another-long-pass' })
+    expect((await fetch(origin, { headers: { cookie: replaced }, redirect: 'manual' })).status).toBe(303)
+  })
+
+  it('rejects an oversized login body without a gateway error', async () => {
+    const gatewayPort = await freePort()
+    await createContext(gatewayPort)
+    const response = await fetch(`http://127.0.0.1:${gatewayPort}/__dsh_remote_gateway/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: `username=phone&password=${'x'.repeat(20_000)}`,
+    })
+    expect(response.status).toBe(413)
+  })
+
+  it('replaces a configured password that is too short with a generated one', async () => {
+    const gatewayPort = await freePort()
+    const ctx = await createContext(gatewayPort, { password: 'short' })
+    const { password } = ctx.remoteGateway.getStatus()
+    expect(password).not.toBe('short')
+    expect(password.length).toBeGreaterThanOrEqual(10)
+  })
+})
+
+async function postLogin(origin: string, password: string, cloudflareIp?: string): Promise<Response> {
+  return await fetch(`${origin}/__dsh_remote_gateway/login`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      ...cloudflareIp === undefined ? {} : { 'cf-connecting-ip': cloudflareIp },
+    },
+    body: new URLSearchParams({ username: 'phone', password }),
+  })
+}
+
+function sessionCookieOf(response: Response): string {
+  const cookie = response.headers.get('set-cookie')?.split(';', 1)[0]
+  if (cookie === undefined) throw new Error(`login returned ${response.status} without a session cookie`)
+  return cookie
+}
+
+function lanIpv4(): string | undefined {
+  return Object.values(os.networkInterfaces()).flat()
+    .find(address => address?.family === 'IPv4' && !address.internal)?.address
+}
+
+async function createContext(
+  gatewayPort: number,
+  overrides: { password?: string; listenHost?: '127.0.0.1' | '0.0.0.0' } = {},
+): Promise<Context> {
   const ctx = new Context()
   contexts.push(ctx)
   await ctx.plugin(WebServer, { host: '127.0.0.1', port: 0 })
   await ctx.plugin(FakeSubprocessRuntime)
   await ctx.plugin(RemoteGatewayService, {
     enabled: true,
-    listenHost: '127.0.0.1',
+    listenHost: overrides.listenHost ?? '127.0.0.1',
     port: gatewayPort,
     username: 'phone',
-    password: 'correct-horse',
+    password: overrides.password ?? 'correct-horse',
     maxFailedAttempts: 3,
     banDurationMinutes: 1,
     cloudflaredPath: 'cloudflared',
